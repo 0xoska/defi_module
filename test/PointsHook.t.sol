@@ -41,6 +41,9 @@ contract TestPointsHook is Test, Deployers, ERC1155TokenReceiver {
         token.approve(address(swapRouter), type(uint256).max);
         token.approve(address(modifyLiquidityRouter),type(uint256).max);
 
+        vm.createWallet("user1");
+        vm.createWallet("user2");
+
         // (key, ) = initPool(ethCurrency, tokenCurrency, hookAddress, 3000, SQRT_PRICE_1_1);
     }
 }

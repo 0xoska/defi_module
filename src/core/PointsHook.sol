@@ -16,8 +16,14 @@ contract PointsHook is BaseHook, ERC1155, Ownable {
     uint16 private constant baseFee = 1000;
     uint16 private dynamicFee;
 
-    
-    constructor(IPoolManager _manager, address _thisOwner) BaseHook(_manager) ERC1155("") Ownable(_thisOwner) {}
+    constructor(
+        IPoolManager _manager, 
+        address _thisOwner
+    ) 
+        BaseHook(_manager) 
+        ERC1155("") 
+        Ownable(_thisOwner) 
+    {}
 
     event ChangeFee(uint16 fee);
 
@@ -36,10 +42,10 @@ contract PointsHook is BaseHook, ERC1155, Ownable {
             Hooks.Permissions({
                 beforeInitialize: false,
                 afterInitialize: false,
-                beforeAddLiquidity: true,
-                afterAddLiquidity: true,
-                beforeRemoveLiquidity: true,
-                afterRemoveLiquidity: true,
+                beforeAddLiquidity: false,
+                afterAddLiquidity: false,
+                beforeRemoveLiquidity: false,
+                afterRemoveLiquidity: false,
                 beforeSwap: false,
                 afterSwap: true,
                 beforeDonate: false,
@@ -74,44 +80,6 @@ contract PointsHook is BaseHook, ERC1155, Ownable {
         return (this.afterSwap.selector, 0);
     }
 
-    function _beforeAddLiquidity(address, PoolKey calldata, ModifyLiquidityParams calldata, bytes calldata)
-        internal
-        virtual
-        returns (bytes4)
-    {
-        revert HookNotImplemented();
-    }
-
-    function _afterAddLiquidity(
-        address,
-        PoolKey calldata,
-        ModifyLiquidityParams calldata,
-        BalanceDelta,
-        BalanceDelta,
-        bytes calldata
-    ) internal virtual returns (bytes4, BalanceDelta) {
-        revert HookNotImplemented();
-    }
-
-    function _beforeRemoveLiquidity(address, PoolKey calldata, ModifyLiquidityParams calldata, bytes calldata)
-        internal
-        virtual
-        returns (bytes4)
-    {
-        revert HookNotImplemented();
-    }
-
-    function _afterRemoveLiquidity(
-        address,
-        PoolKey calldata,
-        ModifyLiquidityParams calldata,
-        BalanceDelta,
-        BalanceDelta,
-        bytes calldata
-    ) internal virtual returns (bytes4, BalanceDelta) {
-        revert HookNotImplemented();
-    }
-
     function _assgnPoints(
         PoolId poolId,
         bytes calldata hookData,
@@ -124,7 +92,7 @@ contract PointsHook is BaseHook, ERC1155, Ownable {
         _mint(user, poolIdUint256, points, "");
     }
 
-    function _getFee() interal view returns(uint16 _fee){
+    function _getFee() internal view returns(uint16 _fee){
         _fee = dynamicFee == 0 ? baseFee : dynamicFee;
     }
 }
