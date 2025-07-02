@@ -15,6 +15,8 @@ import {Currency, CurrencyLibrary} from "v4-periphery/lib/v4-core/src/types/Curr
 import {PoolSwapTest} from "v4-periphery/lib/v4-core/src/test/PoolSwapTest.sol";
 import {Deployers} from "v4-periphery/lib/v4-core/test/utils/Deployers.sol";
 import {LiquidityAmounts} from "v4-periphery/lib/v4-core/test/utils/LiquidityAmounts.sol";
+import {LPFeeLibrary} from "v4-periphery/lib/v4-core/src/libraries/LPFeeLibrary.sol";
+import {IHooks} from "v4-periphery/lib/v4-core/src/interfaces/IHooks.sol";
 
 import {MockERC20} from "solmate/src/test/utils/mocks/MockERC20.sol";
 import {ERC1155TokenReceiver} from "solmate/src/tokens/ERC1155.sol";
@@ -23,27 +25,53 @@ import "forge-std/console.sol";
 import "../src/core/PointsHook.sol";
 
 contract TestPointsHook is Test, Deployers, ERC1155TokenReceiver {
-    
+    PointsHook hook;
+
     MockERC20 token;
     Currency tokenCurrency;
     Currency ethCurrency = Currency.wrap(address((0)));
 
     function setUp() public {
         deployFreshManagerAndRouters();
+        //deploy token
         token = new MockERC20("Mock Token", "MOCK", 18);
+        //eth
         tokenCurrency = Currency.wrap(address(token));
+        //mint token
         token.mint(address(this), 10000e18);
 
-        uint160 flags = uint160(Hooks.AFTER_SWAP_FLAG);
+        uint160 flags = uint160(
+            Hooks.BEFORE_SWAP_FLAG |
+                Hooks.AFTER_SWAP_FLAG |
+                Hooks.BEFORE_ADD_LIQUIDITY_FLAG |
+                Hooks.AFTER_REMOVE_LIQUIDITY_FLAG |
+                Hooks.BEFORE_REMOVE_LIQUIDITY_FLAG |
+                Hooks.AFTER_REMOVE_LIQUIDITY_FLAG
+        );
+        hook = PointsHook(address(flags));
         address hookAddress = address(flags);
-        deployCodeTo("PointsHook.sol:", abi.encode(manager), hookAddress);
 
-        token.approve(address(swapRouter), type(uint256).max);
-        token.approve(address(modifyLiquidityRouter),type(uint256).max);
+        // deployCodeTo("PointsHook.sol:", abi.encode(manager), hookAddress);
 
-        vm.createWallet("user1");
-        vm.createWallet("user2");
+        deployAndMint2Currencies();
+
+        // token.approve(address(swapRouter), type(uint256).max);
+        // token.approve(address(modifyLiquidityRouter),type(uint256).max);
+
+        vm.label(Currency.unwrap(currency0), "currency0");
+        vm.label(Currency.unwrap(currency1), "currency1");
 
         // (key, ) = initPool(ethCurrency, tokenCurrency, hookAddress, 3000, SQRT_PRICE_1_1);
+    }
+
+    function test_swap_counter() public {
+        // (key, ) = initPoolAndAddLiquidity(
+        //     currency0,
+        //     currency1,
+        //     IHooks(address(hook)),
+        //     3000,
+        //     SQRT_PRICE_1_1
+        // );
+        // assertEq(1, hook.swapNumber);
     }
 }

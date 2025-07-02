@@ -6,15 +6,20 @@ import {IPoolManager} from "v4-periphery/lib/v4-core/src/interfaces/IPoolManager
 import {PoolId} from "v4-periphery/lib/v4-core/src/types/PoolId.sol";
 import {PoolKey} from "v4-periphery/lib/v4-core/src/types/PoolKey.sol";
 import {Hooks} from "v4-periphery/lib/v4-core/src/libraries/Hooks.sol";
-import {SwapParams} from "v4-periphery/lib/v4-core/src/types/PoolOperation.sol";
-import {BalanceDelta} from "v4-periphery/lib/v4-core/src/types/BalanceDelta.sol";
+import {SwapParams, ModifyLiquidityParams} from "v4-periphery/lib/v4-core/src/types/PoolOperation.sol";
+import {BeforeSwapDelta, BeforeSwapDeltaLibrary} from "v4-periphery/lib/v4-core/src/types/BeforeSwapDelta.sol";
+import {BalanceDelta, BalanceDeltaLibrary} from "v4-periphery/lib/v4-core/src/types/BalanceDelta.sol";
 import {ERC1155} from "openzeppelin-contracts/contracts/token/ERC1155/ERC1155.sol";
 import {Ownable} from "openzeppelin-contracts/contracts/access/Ownable.sol";
+import "forge-std/console.sol";
+
 
 contract PointsHook is BaseHook, ERC1155, Ownable {
 
     uint16 private constant baseFee = 1000;
     uint16 private dynamicFee;
+
+    uint256 public swapNumber;
 
     constructor(
         IPoolManager _manager, 
@@ -46,7 +51,7 @@ contract PointsHook is BaseHook, ERC1155, Ownable {
                 afterAddLiquidity: false,
                 beforeRemoveLiquidity: false,
                 afterRemoveLiquidity: false,
-                beforeSwap: false,
+                beforeSwap: true,
                 afterSwap: true,
                 beforeDonate: false,
                 afterDonate: false,
@@ -59,6 +64,22 @@ contract PointsHook is BaseHook, ERC1155, Ownable {
 
     function uri(uint256) public override view returns (string memory) {
         return "";
+    }
+
+    function _beforeSwap(
+        address sender, 
+        PoolKey calldata key, 
+        SwapParams calldata params, 
+        bytes calldata hookData
+    )
+        internal
+        override
+        returns (bytes4, BeforeSwapDelta, uint24)
+    {   
+        if(swapNumber >= 10){revert ("Swap number overflow");}
+        console.log("Hello, world! Who doing swap:", sender);
+        //default
+        return (this.beforeSwap.selector, BeforeSwapDeltaLibrary.ZERO_DELTA, 0);
     }
 
     function _afterSwap(
@@ -77,7 +98,46 @@ contract PointsHook is BaseHook, ERC1155, Ownable {
         uint256 amountOfETHSpent = uint256(int256(-delta.amount0()));
         uint256 pointsToGiveout = amountOfETHSpent / 5;
         _assgnPoints(key.toId(), hookData, pointsToGiveout);
+        swapNumber++;
         return (this.afterSwap.selector, 0);
+    }
+
+    function _beforeAddLiquidity(address, PoolKey calldata, ModifyLiquidityParams calldata, bytes calldata)
+        internal
+        override
+        returns (bytes4)
+    {
+        return this.beforeAddLiquidity.selector;
+    }
+
+    function _beforeRemoveLiquidity(address, PoolKey calldata, ModifyLiquidityParams calldata, bytes calldata)
+        internal
+        override
+        returns (bytes4)
+    {
+       return this.beforeRemoveLiquidity.selector;
+    }
+
+    function _afterAddLiquidity(
+        address,
+        PoolKey calldata,
+        ModifyLiquidityParams calldata,
+        BalanceDelta,
+        BalanceDelta,
+        bytes calldata
+    ) internal override returns (bytes4, BalanceDelta) {
+        return (this.afterAddLiquidity.selector, BalanceDeltaLibrary.ZERO_DELTA);
+    }
+
+    function _afterRemoveLiquidity(
+        address,
+        PoolKey calldata,
+        ModifyLiquidityParams calldata,
+        BalanceDelta,
+        BalanceDelta,
+        bytes calldata
+    ) internal override returns (bytes4, BalanceDelta) {
+        return (this.afterRemoveLiquidity.selector, BalanceDeltaLibrary.ZERO_DELTA);
     }
 
     function _assgnPoints(
